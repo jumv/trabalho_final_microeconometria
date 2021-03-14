@@ -47,6 +47,6 @@ df_pop[158,1] <- "Vila Cosmos"
 #Unindo tabelas pq falo português (Join)
 df_idh_pop = df_idh_sep %>% left_join(df_pop,by=c("Bairro"="Bairros"))
 
-# Replicando tabela 
+
 
 
