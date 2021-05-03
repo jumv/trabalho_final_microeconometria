@@ -78,7 +78,7 @@ dp_stats$Regiao <- dp_stats$Regiao %>% str_trim()
 
 # Selecionando apenas crimes de interesse na capital
 dp_stats <- dp_stats %>% filter(Regiao == 'Capital') %>%
-  select(CISP,mes,ano,letalidade_violenta,total_roubos,total_furtos)
+  select(CISP,mes,ano,letalidade_violenta,total_roubos,total_furtos,pessoas_desaparecidas)
   
 
 # Juntando as delegacias do grupo de tratamento e as estatisticas de todas as delegacias
@@ -114,7 +114,8 @@ dp_stats_base$pop <- as.numeric(dp_stats_base$pop)
 # Criando as colunas de taxas (letalidade,roubo e furto) por 100 mil hab
 dp_stats_base <- dp_stats_base %>% mutate(tx_letalidade = (letalidade_violenta/pop) * 100000,
                        tx_roubo = (total_roubos/pop) * 100000,
-                       tx_furtos = (total_furtos/pop) * 100000)
+                       tx_furtos = (total_furtos/pop) * 100000,
+                       tx_pessoas_desaparecidas = (pessoas_desaparecidas/pop) * 100000)
 
 write.csv(dp_stats_base,'dp_stats_base.csv')
 

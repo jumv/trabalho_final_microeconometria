@@ -1,0 +1,39 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+
+```{r}
+## Pacotes
+library(tidyverse)
+library(stargazer)
+
+
+# Importando dados
+df_pop <- read_csv2('PopulacaoEvolucaoMensalCisp.csv')
+
+# DPs
+tratamento = c(9,10,12,13,14,15,16,34,32,42,21,27,29,23,18,19,20,1,4,5,6)
+controle =  c(7,17,22,24,25,26,28,30,31,33,35,36,37,38,39,40,41,43,44)
+```
+
+```{r,results = "asis"}
+df_pop %>% filter(cisp %in% c(tratamento,controle),
+                  ano == 2019,
+                  mes == 11) %>%
+  group_by(cisp) %>%
+  summarise(populacao = as.integer(mean(pop))) %>%
+  left_join(read_csv('dps_bairros.csv') %>%
+              select(cisp = DP,`Unidade Territorial`),by = 'cisp') %>%
+  select(cisp,populacao_media = populacao,`Unidade Territorial`) %>% arrange(desc(populacao_media)) %>%
+  DT::datatable(rownames = FALSE)
+  
+  #stargazer(summary = F,type = 'latex')
+```
+
+
+

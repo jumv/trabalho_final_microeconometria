@@ -9,7 +9,7 @@ tratamento = c(9,10,12,13,14,15,16,34,32,42,21,27,29,23,18,19,20,1,4,5,6)
 controle =  c(7,17,22,24,25,26,28,30,31,33,35,36,37,38,39,40,41,43,44)
 
 # Tratamento para diff in diff
-collect_data <- function(ano_corte,ano_zero,ano_um,dp_controle = controle,
+collect_data <- function(y,ano_corte,ano_zero,ano_um,dp_controle = controle,
                       dp_tratamento = tratamento){
   # Importando dados
   dp_stats_base <- read.csv('dp_stats_base.csv')
@@ -31,92 +31,112 @@ collect_data <- function(ano_corte,ano_zero,ano_um,dp_controle = controle,
                                                                   !CISP %in% dp_tratamento ~ 0))
   # Selecionando apenas as colunas para o estudo
   df_diff_and_diff <- dp_stats_base %>%
-    select(tx_letalidade,tx_roubo,tx_furtos,treatment,time,date,CISP)
+    select(.data[[y]],treatment,time,date,CISP)
   # return 
   df_diff_and_diff
 }
 
-# diff in diff  
-diff_in_diff <- function(ano_corte,ano_zero,ano_um,dp_controle = controle,
-                        dp_tratamento = tratamento){
-  # Tratando dados
-  df_diff_and_diff = collect_data(ano_corte,ano_zero,ano_um,dp_controle = controle,
-                                  dp_tratamento = tratamento)
-  # Criando coluna de diff in diff
-  df_diff_and_diff  <- df_diff_and_diff %>% mutate(did = treatment * time)
-  
-  # Regressao com tx de roubo
-  diff_diff_roubos = lm(tx_roubo ~ treatment + time + did,data = df_diff_and_diff)
-  
-  # Regressao com tx de furtos
-  diff_diff_furtos = lm(tx_furtos ~ treatment + time + did,data = df_diff_and_diff)
-  
-  # Regressao com tx de letalidade
-  diff_diff_letalidade = lm(tx_letalidade ~ treatment + time + did,data = df_diff_and_diff)
-  
-  list(diff_diff_furtos,diff_diff_roubos,diff_diff_letalidade)
-  
-}  
+# # diff in diff  
+# diff_in_diff <- function(ano_corte,ano_zero,ano_um,dp_controle = controle,
+#                         dp_tratamento = tratamento){
+#   # Tratando dados
+#   df_diff_and_diff = collect_data(ano_corte,ano_zero,ano_um,dp_controle = controle,
+#                                   dp_tratamento = tratamento)
+#   # Criando coluna de diff in diff
+#   df_diff_and_diff  <- df_diff_and_diff %>% mutate(did = treatment * time)
+#   
+#   # Regressao com tx de roubo
+#   diff_diff_roubos = lm(tx_roubo ~ treatment + time + did,data = df_diff_and_diff)
+#   
+#   # Regressao com tx de furtos
+#   diff_diff_furtos = lm(tx_furtos ~ treatment + time + did,data = df_diff_and_diff)
+#   
+#   # Regressao com tx de letalidade
+#   diff_diff_letalidade = lm(tx_letalidade ~ treatment + time + did,data = df_diff_and_diff)
+#   
+#   list(diff_diff_furtos,diff_diff_roubos,diff_diff_letalidade)
+#   
+# }  
   
 # fixed effects
 
-fixed_effects <- function(ano_corte,ano_zero,ano_um,dp_controle = controle,
-                          dp_tratamento = tratamento){
+diff_in_diff <- function(y,ano_corte,ano_zero,ano_um,dp_controle = controle,
+                          dp_tratamento = tratamento,effect = NULL){
   # Tratando dados
-  df_diff_and_diff = collect_data(ano_corte,ano_zero,ano_um,dp_controle = controle,
+  df_diff_and_diff = collect_data(y,ano_corte,ano_zero,ano_um,dp_controle = controle,
                                   dp_tratamento = tratamento)
   # Criando coluna de diff in diff
   df_diff_and_diff  <- df_diff_and_diff %>% mutate(did = treatment * time)
   
-  # Regressao com efeito de entidade fixa furtos
-  entity_fixed_furtos <- plm(tx_furtos ~ treatment + time + did, 
-                      data = df_diff_and_diff,
-                      index = c("CISP", "date"), 
-                      model = "within")
-  # Regressao com efeito de entidade fixa furtos
-  time_fixed_furtos <- plm(tx_furtos ~ treatment + time + did, 
-                             data = df_diff_and_diff,
-                             index = c("CISP", "date"), 
-                             model = "within",
-                             effect = 'twoways')
-  # Regressao com efeito de entidade fixa roubos
-  entity_fixed_roubos <- plm(tx_roubo ~ treatment + time + did, 
-                             data = df_diff_and_diff,
-                             index = c("CISP", "date"), 
-                             model = "within")
-  # Regressao com efeito de entidade fixa furtos
-  time_fixed_roubos <- plm(tx_roubo ~ treatment + time + did, 
-                           data = df_diff_and_diff,
-                           index = c("CISP", "date"), 
-                           model = "within",
-                           effect = 'twoways')
-  # Regressao com efeito de entidade fixa furtos
-  entity_fixed_letalidade <- plm(tx_letalidade ~ treatment + time + did, 
-                             data = df_diff_and_diff,
-                             index = c("CISP", "date"), 
-                             model = "within")
-  # Regressao com efeito de entidade fixa furtos
-  time_fixed_letalidade <- plm(tx_letalidade ~ treatment + time + did, 
-                           data = df_diff_and_diff,
-                           index = c("CISP", "date"), 
-                           model = "within",
-                           effect = 'twoways')
-  
-  list(entity_fixed_furtos,time_fixed_furtos,entity_fixed_roubos,time_fixed_roubos,
-       entity_fixed_letalidade,time_fixed_letalidade)
+  # Criando regressao
+  f <- paste(y, "~", paste('treatment','time','did', sep =" + "))
+  if (is.null(effect)){
+    plm(f,
+        data = df_diff_and_diff,
+        index = c("CISP", "date"), 
+        model = "within")
+  }
+  else{
+    plm(f,
+        data = df_diff_and_diff,
+        index = c("CISP", "date"), 
+        model = "within",
+        effect = 'twoways')
+  }
   
 }
   
+  # # Regressao com efeito de entidade fixa furtos
+  # entity_fixed_furtos <- plm(tx_furtos ~ treatment + time + did, 
+  #                     data = df_diff_and_diff,
+  #                     index = c("CISP", "date"), 
+  #                     model = "within")
+  # # Regressao com efeito de entidade fixa furtos
+  # time_fixed_furtos <- plm(tx_furtos ~ treatment + time + did, 
+  #                            data = df_diff_and_diff,
+  #                            index = c("CISP", "date"), 
+  #                            model = "within",
+  #                            effect = 'twoways')
+  # # Regressao com efeito de entidade fixa roubos
+  # entity_fixed_roubos <- plm(tx_roubo ~ treatment + time + did, 
+  #                            data = df_diff_and_diff,
+  #                            index = c("CISP", "date"), 
+  #                            model = "within")
+  # # Regressao com efeito de entidade fixa furtos
+  # time_fixed_roubos <- plm(tx_roubo ~ treatment + time + did, 
+  #                          data = df_diff_and_diff,
+  #                          index = c("CISP", "date"), 
+  #                          model = "within",
+  #                          effect = 'twoways')
+  # # Regressao com efeito de entidade fixa furtos
+  # entity_fixed_letalidade <- plm(tx_letalidade ~ treatment + time + did, 
+  #                            data = df_diff_and_diff,
+  #                            index = c("CISP", "date"), 
+  #                            model = "within")
+  # # Regressao com efeito de entidade fixa furtos
+  # time_fixed_letalidade <- plm(tx_letalidade ~ treatment + time + did, 
+  #                          data = df_diff_and_diff,
+  #                          index = c("CISP", "date"), 
+  #                          model = "within",
+  #                          effect = 'twoways')
+  # 
+  # list(entity_fixed_furtos,time_fixed_furtos,entity_fixed_roubos,time_fixed_roubos,
+  #      entity_fixed_letalidade,time_fixed_letalidade)
+  
+
   
   
-model_diff_diff = diff_in_diff(2014,2010,2019)
 
-stargazer::stargazer(model_diff_diff,type = 'text',title = 'Diff in Diff de geral',
-                     style = 'aer',align = T)
 
-model_diff_diff = fixed_effects(2014,2010,2019)
 
-stargazer::stargazer(model_diff_diff,type = 'text',title = 'Diff in Diff de geral',
-                     style = 'qje',align = T)
+
+
+
+
+
+
+
+
+
 
 
